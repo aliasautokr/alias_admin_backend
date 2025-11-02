@@ -8,7 +8,7 @@ datasource db {
 }
 
 model CarRecord {
-  id               String    @id
+  id               String    @id @default(cuid())
   vin              String    @unique
   car_model        String
   engine_cc        String
@@ -27,7 +27,7 @@ model CarRecord {
 }
 
 model Collection {
-  id          String   @id
+  id          String   @id @default(cuid())
   title       String
   images      String[]
   description Json
@@ -40,7 +40,7 @@ model Collection {
 }
 
 model Company {
-  id        String   @id
+  id        String   @id @default(cuid())
   name      String
   address   String
   phone     String
@@ -55,7 +55,7 @@ model Company {
 }
 
 model Inspection {
-  id           String   @id
+  id           String   @id @default(cuid())
   title        String
   images       String[]
   description  Json
@@ -69,7 +69,7 @@ model Inspection {
 }
 
 model Invoice {
-  id            String     @id
+  id            String     @id @default(cuid())
   invoiceNumber String     @unique
   date          DateTime
   country       String
@@ -96,7 +96,7 @@ model Invoice {
 }
 
 model PortInfo {
-  id           String   @id
+  id           String   @id @default(cuid())
   shortAddress String
   description  String
   authorId     String
@@ -108,7 +108,7 @@ model PortInfo {
 }
 
 model RefreshToken {
-  id              String    @id
+  id              String    @id @default(cuid())
   userId          String
   hashedToken     String
   expiresAt       DateTime
@@ -119,7 +119,7 @@ model RefreshToken {
 }
 
 model Session {
-  id           String   @id
+  id           String   @id @default(cuid())
   userId       String
   accessToken  String
   refreshToken String
@@ -129,7 +129,7 @@ model Session {
 }
 
 model User {
-  id           String         @id
+  id           String         @id @default(cuid())
   email        String         @unique
   name         String?
   image        String?
