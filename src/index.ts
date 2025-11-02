@@ -16,7 +16,30 @@ import { invoicesRouter } from './routes/invoices'
 const app = express()
 app.use(helmet())
 app.use(cors({ 
-  origin: env.CORS_ORIGIN, 
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true)
+    
+    // Parse allowed origins from CORS_ORIGIN (comma-separated)
+    const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim())
+    
+    // Also allow common production domains
+    const defaultAllowed = [
+      'https://admin.aliasauto.kr',
+      'https://aliasauto.kr',
+      'https://www.aliasauto.kr',
+      'http://localhost:3002',
+      'http://localhost:3000',
+    ]
+    
+    const allAllowed = [...allowedOrigins, ...defaultAllowed]
+    
+    if (allAllowed.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
