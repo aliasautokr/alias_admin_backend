@@ -1,0 +1,83 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env*.local
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.classpath
+.project
+.settings/
+*.iml
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Prisma
+# Keep schema.prisma, but ignore generated client in node_modules
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database files (if using local SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# PM2
+.pm2/
+ecosystem.config.js.bak
+
+# AWS/S3
+*.pem
+*.key
+*.cert
+
+# Misc
+.cache/
+.parcel-cache/
+.npm/
+.eslintcache
+.stylelintcache
+

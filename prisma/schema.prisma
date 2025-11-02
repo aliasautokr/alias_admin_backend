@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CarRecord {
+  id               String    @id
+  vin              String    @unique
+  car_model        String
+  engine_cc        String
+  weight           String
+  manufacture_date String
+  price            String
+  fuel_type        String    @default("Gasoline")
+  authorId         String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime
+  User             User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  Invoice          Invoice[]
+
+  @@index([authorId])
+  @@index([vin])
+}
+
+model Collection {
+  id          String   @id
+  title       String
+  images      String[]
+  description Json
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  User        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+}
+
+model Company {
+  id        String   @id
+  name      String
+  address   String
+  phone     String
+  logoUrl   String?
+  sealUrl   String?
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  User      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+}
+
+model Inspection {
+  id           String   @id
+  title        String
+  images       String[]
+  description  Json
+  customerName String?
+  authorId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  User         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+}
+
+model Invoice {
+  id            String     @id
+  invoiceNumber String     @unique
+  date          DateTime
+  country       String
+  fileUrl       String
+  data          Json
+  carRecordId   String?
+  carVin        String?
+  carModel      String?
+  carYear       String?
+  carWeight     String?
+  carVolume     String?
+  carPrice      String?
+  carFuelType   String?
+  authorId      String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime
+  User          User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  CarRecord     CarRecord? @relation(fields: [carRecordId], references: [id])
+
+  @@index([authorId])
+  @@index([carRecordId])
+  @@index([carVin])
+  @@index([invoiceNumber])
+}
+
+model PortInfo {
+  id           String   @id
+  shortAddress String
+  description  String
+  authorId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  User         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+}
+
+model RefreshToken {
+  id              String    @id
+  userId          String
+  hashedToken     String
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  replacedByToken String?
+  createdAt       DateTime  @default(now())
+  User            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id           String   @id
+  userId       String
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id           String         @id
+  email        String         @unique
+  name         String?
+  image        String?
+  googleId     String?        @unique
+  role         Role           @default(USER)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  CarRecord    CarRecord[]
+  Collection   Collection[]
+  Company      Company[]
+  Inspection   Inspection[]
+  Invoice      Invoice[]
+  PortInfo     PortInfo[]
+  RefreshToken RefreshToken[]
+  Session      Session[]
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  SALES
+  MARKETING
+  USER
+}

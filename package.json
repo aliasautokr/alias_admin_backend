@@ -1,0 +1,39 @@
+{
+  "name": "aliasauto_backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "prisma": "prisma",
+    "migrate": "prisma migrate dev",
+    "generate": "prisma generate",
+    "sanitize-car-records": "tsx src/scripts/sanitize-car-records.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.916.0",
+    "@aws-sdk/s3-request-presigner": "^3.916.0",
+    "@prisma/client": "^5.19.1",
+    "cors": "^2.8.5",
+    "docxtemplater": "^3.67.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "google-auth-library": "^9.14.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "pizzip": "^3.2.0",
+    "react-dropzone": "^14.3.8",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/helmet": "^4.0.0",
+    "@types/jsonwebtoken": "^9.0.6",
+    "prisma": "^5.19.1",
+    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.6.3"
+  }
+}
