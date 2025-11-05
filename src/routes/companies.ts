@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { s3Service } from '../lib/s3'
-import { Prisma } from '@prisma/client'
+import { Prisma, Role } from '@prisma/client'
 
 export const companiesRouter = Router()
 
@@ -35,7 +35,7 @@ const requireOwnerOrAdmin = async (req: AuthRequest, res: any, next: any) => {
   const userId = req.user?.id
   const userRole = req.user?.role
 
-  if (userRole === 'SUPER_ADMIN') {
+  if (userRole === Role.SUPER_ADMIN) {
     return next()
   }
 
@@ -98,7 +98,7 @@ companiesRouter.post('/upload-url', async (req: AuthRequest, res) => {
 })
 
 // GET /api/v1/companies - List all companies
-companiesRouter.get('/', async (req: AuthRequest, res) => {
+companiesRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 10
@@ -149,7 +149,7 @@ companiesRouter.get('/', async (req: AuthRequest, res) => {
 })
 
 // GET /api/v1/companies/:id - Get single company
-companiesRouter.get('/:id', async (req: AuthRequest, res) => {
+companiesRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params
 
@@ -182,7 +182,7 @@ companiesRouter.get('/:id', async (req: AuthRequest, res) => {
 })
 
 // POST /api/v1/companies - Create company
-companiesRouter.post('/', requireRole('SALES', 'SUPER_ADMIN'), async (req: AuthRequest, res) => {
+companiesRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: AuthRequest, res) => {
   try {
     const { name, address, phone, logoUrl, sealUrl } = CreateCompanySchema.parse(req.body)
     const authorId = req.user!.id

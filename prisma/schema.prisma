@@ -18,8 +18,8 @@ model CarRecord {
   fuel_type        String    @default("Gasoline")
   authorId         String
   createdAt        DateTime  @default(now())
-  updatedAt        DateTime
-  User             User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  updatedAt        DateTime  @updatedAt
+  author           User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   Invoice          Invoice[]
 
   @@index([authorId])
@@ -33,8 +33,8 @@ model Collection {
   description Json
   authorId    String
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
-  User        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime @updatedAt
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
 }
@@ -48,8 +48,8 @@ model Company {
   sealUrl   String?
   authorId  String
   createdAt DateTime @default(now())
-  updatedAt DateTime
-  User      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
 }
@@ -62,8 +62,8 @@ model Inspection {
   customerName String?
   authorId     String
   createdAt    DateTime @default(now())
-  updatedAt    DateTime
-  User         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  updatedAt    DateTime @updatedAt
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
 }
@@ -85,9 +85,9 @@ model Invoice {
   carFuelType   String?
   authorId      String
   createdAt     DateTime   @default(now())
-  updatedAt     DateTime
-  User          User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  CarRecord     CarRecord? @relation(fields: [carRecordId], references: [id])
+  updatedAt     DateTime   @updatedAt
+  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  carRecord     CarRecord? @relation(fields: [carRecordId], references: [id])
 
   @@index([authorId])
   @@index([carRecordId])
@@ -101,8 +101,8 @@ model PortInfo {
   description  String
   authorId     String
   createdAt    DateTime @default(now())
-  updatedAt    DateTime
-  User         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  updatedAt    DateTime @updatedAt
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
 }
@@ -137,7 +137,7 @@ model User {
   role         Role           @default(USER)
   isActive     Boolean        @default(true)
   createdAt    DateTime       @default(now())
-  updatedAt    DateTime
+  updatedAt    DateTime       @updatedAt
   CarRecord    CarRecord[]
   Collection   Collection[]
   Company      Company[]

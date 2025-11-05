@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
-import { Prisma } from '@prisma/client'
+import { Prisma, Role } from '@prisma/client'
 
 export const carRecordsRouter = Router()
 
@@ -46,7 +46,7 @@ const requireOwnerOrAdmin = async (req: AuthRequest, res: any, next: any) => {
   const userId = req.user?.id
   const userRole = req.user?.role
 
-  if (userRole === 'SUPER_ADMIN') {
+  if (userRole === Role.SUPER_ADMIN) {
     return next()
   }
 
@@ -73,7 +73,7 @@ const requireOwnerOrAdmin = async (req: AuthRequest, res: any, next: any) => {
 carRecordsRouter.use(requireAuth)
 
 // GET /api/v1/car-records/latest - Get last entered car record
-carRecordsRouter.get('/latest', async (req: AuthRequest, res) => {
+carRecordsRouter.get('/latest', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const carRecord = await prisma.carRecord.findFirst({
       orderBy: { createdAt: 'desc' },
@@ -104,7 +104,7 @@ carRecordsRouter.get('/latest', async (req: AuthRequest, res) => {
 })
 
 // GET /api/v1/car-records/search?vinLastDigits=xxxx - Search car records by last 4, 5, or 6 digits of VIN
-carRecordsRouter.get('/search', async (req: AuthRequest, res) => {
+carRecordsRouter.get('/search', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const vinLastDigits = req.query.vinLastDigits as string
     
@@ -150,7 +150,7 @@ carRecordsRouter.get('/search', async (req: AuthRequest, res) => {
 })
 
 // GET /api/v1/car-records - List all car records
-carRecordsRouter.get('/', async (req: AuthRequest, res) => {
+carRecordsRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 10
@@ -201,7 +201,7 @@ carRecordsRouter.get('/', async (req: AuthRequest, res) => {
 })
 
 // GET /api/v1/car-records/:id - Get single car record
-carRecordsRouter.get('/:id', async (req: AuthRequest, res) => {
+carRecordsRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params
 
@@ -234,7 +234,7 @@ carRecordsRouter.get('/:id', async (req: AuthRequest, res) => {
 })
 
 // POST /api/v1/car-records - Create car record
-carRecordsRouter.post('/', requireRole('SALES', 'SUPER_ADMIN'), async (req: AuthRequest, res) => {
+carRecordsRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: AuthRequest, res) => {
   try {
     const { vin, car_model, engine_cc, weight, manufacture_date, price, fuel_type } = CreateCarRecordSchema.parse(req.body)
     const authorId = req.user!.id

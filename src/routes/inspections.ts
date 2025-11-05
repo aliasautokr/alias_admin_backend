@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { s3Service } from '../lib/s3'
-import { Prisma } from '@prisma/client'
+import { Prisma, Role } from '@prisma/client'
 
 export const inspectionsRouter = Router()
 
@@ -33,7 +33,7 @@ const requireOwnerOrAdmin = async (req: AuthRequest, res: any, next: any) => {
   const userId = req.user?.id
   const userRole = req.user?.role
 
-  if (userRole === 'SUPER_ADMIN') {
+  if (userRole === Role.SUPER_ADMIN) {
     return next()
   }
 
@@ -131,7 +131,7 @@ inspectionsRouter.post('/upload-url', async (req: AuthRequest, res) => {
 })
 
 // GET /api/v1/inspections - List all inspections
-inspectionsRouter.get('/', async (req: AuthRequest, res) => {
+inspectionsRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 10
@@ -207,7 +207,7 @@ inspectionsRouter.get('/', async (req: AuthRequest, res) => {
 })
 
 // GET /api/v1/inspections/:id - Get single inspection
-inspectionsRouter.get('/:id', async (req: AuthRequest, res) => {
+inspectionsRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params
 
@@ -261,7 +261,7 @@ inspectionsRouter.get('/:id', async (req: AuthRequest, res) => {
 })
 
 // POST /api/v1/inspections - Create inspection
-inspectionsRouter.post('/', requireRole('SALES', 'SUPER_ADMIN'), async (req: AuthRequest, res) => {
+inspectionsRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: AuthRequest, res) => {
   try {
     const { title, images, description, customerName } = CreateInspectionSchema.parse(req.body)
     const authorId = req.user!.id
