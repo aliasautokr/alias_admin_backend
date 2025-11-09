@@ -57,7 +57,11 @@ const CreateInvoiceSchema = z.object({
   companyId: z.string().min(1),
   portInfoId: z.string().min(1),
   country: z.string().min(1),
+  destination: z.string().min(1),
+  destinationCountry: z.string().min(1),
+  invoiceTemplateUrl: z.string().url(),
   carRecordId: z.string().optional(), // Optional car record ID
+  mode: z.enum(['fake', 'original']).default('fake'),
   buyer: z.object({
     country: z.string(),
     consignee_name: z.string(),
@@ -292,7 +296,17 @@ invoicesRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req
 // POST /api/v1/invoices - Create invoice with Word generation
 invoicesRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: AuthRequest, res) => {
   try {
-    const { companyId, portInfoId, country, carRecordId, buyer } = CreateInvoiceSchema.parse(req.body)
+    const {
+      companyId,
+      portInfoId,
+      country,
+      destination,
+      destinationCountry,
+      invoiceTemplateUrl,
+      carRecordId,
+      mode,
+      buyer,
+    } = CreateInvoiceSchema.parse(req.body)
     const authorId = req.user!.id
 
     // Generate invoice number: {COUNTRY_CODE}-{YYYYMMDD}-{SEQUENCE}
@@ -333,58 +347,46 @@ invoicesRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: 
       'Kazakhstan': 'Republic of Kazakhstan',
       'Kyrgyzstan': 'Kyrgyz Republic',
     }
-    const officialCountryName = countryNameMap[buyer.country] || buyer.country || ''
+    const officialCountryName = destinationCountry || countryNameMap[buyer.country] || buyer.country || ''
     
     // Use fuel_type from car record (saved in database)
     const fuelType = carRecord?.fuel_type || 'Gasoline'
     
+    const carYearStr = carRecord?.manufacture_date
+      ? carRecord.manufacture_date.split('-')[0].trim().replace(/\D/g, '').slice(0, 4)
+      : ''
+    const carYear = carYearStr ? Number(carYearStr) : 0
+    const parseNumeric = (value?: string | null) => {
+      if (!value) return 0
+      const sanitized = value.toString().replace(/[^\d.]/g, '').trim()
+      return sanitized ? Number(sanitized) : 0
+    }
+
     const invoiceData = {
-      // Shipper info (Company)
       shipper_name: company.name || '',
       shipper_address: company.address || '',
       shipper_tel: company.phone || '',
-      
-      // Invoice info
       invoice_no: invoiceNumber,
-      invoice_date: invoiceDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-      
-      // Destination - Buyer Country (official country name)
-      destination: officialCountryName,
-      
-      // Consignee info (Buyer)
+      invoice_date: invoiceDate.toISOString().split('T')[0],
+      destination_country: destinationCountry || officialCountryName,
+      destination: destination || country,
       consignee_name: buyer.consignee_name || '',
       consignee_address: buyer.consignee_address || '',
       consignee_tel: buyer.consignee_tel || '',
       consignee_iin: buyer.consignee_iin || '',
-      
-      // Origin country - Always South Korea
-      origin_country: 'South Korea',
-      
-      // Port info
-      port_name: portInfo.shortAddress || '', // Port short address
-      port_loading: portInfo.description || '', // Port full address (description field)
-      
-      // Sailing date - Today date
-      sailing_date: invoiceDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-      
-      // Car info - use car record data if available, otherwise empty
-      car_vin: carRecord?.vin || '',
+      port_loading: portInfo.description || '',
+      port_name: portInfo.shortAddress || '',
+      sailing_date: invoiceDate.toISOString().split('T')[0],
+      car_year: carYear,
       car_model: carRecord?.car_model || '',
-      // Extract year only (number) from manufacture_date - handles formats like "2025-04" or "2025"
-      car_year: carRecord?.manufacture_date 
-        ? carRecord.manufacture_date.split('-')[0].trim().replace(/\D/g, '').slice(0, 4)
-        : '',
-      volume: carRecord?.engine_cc || '', // engine_cc maps to volume
-      // Extract only numeric value from weight - remove all non-numeric characters except decimal point
-      weight: carRecord?.weight 
-        ? String(carRecord.weight).replace(/[^\d.]/g, '').trim()
-        : '',
-      fuel_type: fuelType, // Hybrid, Diesel, or Gasoline
-      unit_price: carRecord?.price || '',
-      
-      // Images - note: Python backend expects logo_image and seal_image, not logo_url/seal_url
+      volume: parseNumeric(carRecord?.engine_cc),
+      fuel_type: fuelType,
+      car_vin: carRecord?.vin || '',
+      unit_price: parseNumeric(carRecord?.price),
+      weight: parseNumeric(carRecord?.weight),
       logo_image: company.logoUrl || '',
       seal_image: company.sealUrl || '',
+      file_url: invoiceTemplateUrl,
     }
 
     console.log('=== CALLING PYTHON BACKEND FOR WORD GENERATION ===')
@@ -481,6 +483,10 @@ invoicesRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: 
       } : null,
       // Also include car_vin for easy access
       car_vin: carRecord?.vin || '',
+      destination,
+      destinationCountry,
+      invoiceTemplateUrl,
+      mode,
     }
 
     // Create invoice record with car information

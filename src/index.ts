@@ -12,6 +12,7 @@ import { carRecordsRouter } from './routes/car-records'
 import { companiesRouter } from './routes/companies'
 import { portInfosRouter } from './routes/port-infos'
 import { invoicesRouter } from './routes/invoices'
+import { invoiceTemplatesRouter } from './routes/invoice-templates'
 
 const app = express()
 app.use(helmet())
@@ -57,6 +58,7 @@ app.use(`${API_PREFIX}/car-records`, carRecordsRouter)
 app.use(`${API_PREFIX}/companies`, companiesRouter)
 app.use(`${API_PREFIX}/port-infos`, portInfosRouter)
 app.use(`${API_PREFIX}/invoices`, invoicesRouter)
+app.use(`${API_PREFIX}/invoice-templates`, invoiceTemplatesRouter)
 
 app.get(`${API_PREFIX}/health`, (_req, res) => res.json({ ok: true }))
 

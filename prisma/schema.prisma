@@ -95,6 +95,19 @@ model Invoice {
   @@index([invoiceNumber])
 }
 
+model InvoiceTemplate {
+  id            String   @id @default(cuid())
+  fileName      String
+  fileUrl       String
+  s3Key         String
+  uploadedById  String
+  createdAt     DateTime @default(now())
+  uploadedBy    User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([uploadedById])
+  @@index([createdAt])
+}
+
 model PortInfo {
   id           String   @id @default(cuid())
   shortAddress String
@@ -143,6 +156,7 @@ model User {
   Company      Company[]
   Inspection   Inspection[]
   Invoice      Invoice[]
+  InvoiceTemplate InvoiceTemplate[]
   PortInfo     PortInfo[]
   RefreshToken RefreshToken[]
   Session      Session[]
