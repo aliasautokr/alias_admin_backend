@@ -26,7 +26,7 @@ const allowedDocTypes = new Set([
 
 invoiceTemplatesRouter.use(requireAuth)
 
-invoiceTemplatesRouter.post('/upload-url', requireRole(Role.SUPER_ADMIN), async (req: AuthRequest, res) => {
+invoiceTemplatesRouter.post('/upload-url', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const { fileName, fileType } = UploadUrlSchema.parse(req.body)
 
@@ -60,7 +60,7 @@ invoiceTemplatesRouter.post('/upload-url', requireRole(Role.SUPER_ADMIN), async 
   }
 })
 
-invoiceTemplatesRouter.post('/', requireRole(Role.SUPER_ADMIN), async (req: AuthRequest, res) => {
+invoiceTemplatesRouter.post('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const { fileName, fileUrl, s3Key } = CreateTemplateSchema.parse(req.body)
 
@@ -90,7 +90,7 @@ invoiceTemplatesRouter.post('/', requireRole(Role.SUPER_ADMIN), async (req: Auth
   }
 })
 
-invoiceTemplatesRouter.get('/', requireRole(Role.SUPER_ADMIN), async (_req: AuthRequest, res) => {
+invoiceTemplatesRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (_req: AuthRequest, res) => {
   try {
     const templates = await prisma.invoiceTemplate.findMany({
       orderBy: { createdAt: 'desc' },

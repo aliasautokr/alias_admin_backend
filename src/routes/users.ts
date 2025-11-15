@@ -9,9 +9,37 @@ const VALID_ROLES = Object.values(Role)
 
 usersRouter.use(requireAuth)
 
-usersRouter.get('/', requireRole(Role.SUPER_ADMIN), async (_req, res) => {
-  const list = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } })
-  return res.json({ success: true, data: list, pagination: { page: 1, pageSize: list.length, total: list.length, totalPages: 1 } })
+usersRouter.get('/', requireRole(Role.SUPER_ADMIN), async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1
+    const limit = parseInt(req.query.limit as string) || 20
+    const skip = (page - 1) * limit
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count()
+    ])
+
+    return res.json({
+      success: true,
+      data: {
+        items: users,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        }
+      }
+    })
+  } catch (error) {
+    console.error('List users error:', error)
+    return res.status(500).json({ success: false, error: 'Failed to fetch users' })
+  }
 })
 
 usersRouter.patch('/:id/role', requireRole(Role.SUPER_ADMIN), async (req: AuthRequest, res) => {

@@ -8,6 +8,7 @@ import { authRouter } from './routes/auth'
 import { usersRouter } from './routes/users'
 import { collectionsRouter } from './routes/collections'
 import { publicCollectionsRouter } from './routes/public-collections'
+import { publicInspectionsRouter } from './routes/public-inspections'
 import { inspectionsRouter } from './routes/inspections'
 import { carRecordsRouter } from './routes/car-records'
 import { companiesRouter } from './routes/companies'
@@ -53,6 +54,7 @@ const API_PREFIX = '/api/v1'
 
 // Public routes (no authentication)
 app.use(`${API_PREFIX}/public/collections`, publicCollectionsRouter)
+app.use(`${API_PREFIX}/public/inspections`, publicInspectionsRouter)
 
 // Protected routes (authentication required)
 app.use(`${API_PREFIX}/auth`, authRouter)

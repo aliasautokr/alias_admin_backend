@@ -154,7 +154,7 @@ carRecordsRouter.get('/search', requireRole(Role.SUPER_ADMIN, Role.SALES), async
 carRecordsRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: AuthRequest, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1
-    const limit = parseInt(req.query.limit as string) || 10
+    const limit = parseInt(req.query.limit as string) || 20
     const authorId = req.query.authorId as string
     const skip = (page - 1) * limit
 
