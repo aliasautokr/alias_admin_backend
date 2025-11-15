@@ -4,6 +4,7 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { s3Service } from '../lib/s3'
 import { Prisma, Role } from '@prisma/client'
+import crypto from 'crypto'
 
 export const invoicesRouter = Router()
 
@@ -202,7 +203,7 @@ invoicesRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: A
       prisma.invoice.findMany({
         where,
         include: {
-          author: {
+          User: {
             select: {
               id: true,
               name: true,
@@ -210,7 +211,7 @@ invoicesRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: A
               image: true,
             }
           },
-          carRecord: {
+          CarRecord: {
             select: {
               id: true,
               vin: true,
@@ -222,7 +223,7 @@ invoicesRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: A
               fuel_type: true,
             }
           }
-        },
+        } as any,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
@@ -256,7 +257,7 @@ invoicesRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req
     const invoice = await prisma.invoice.findUnique({
       where: { id },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -264,7 +265,7 @@ invoicesRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req
             image: true,
           }
         },
-        carRecord: {
+        CarRecord: {
           select: {
             id: true,
             vin: true,
@@ -276,7 +277,7 @@ invoicesRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req
             fuel_type: true,
           }
         }
-      }
+      } as any
     })
 
     if (!invoice) {
@@ -492,6 +493,7 @@ invoicesRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: 
     // Create invoice record with car information
     const invoice = await prisma.invoice.create({
       data: {
+        id: crypto.randomUUID(),
         invoiceNumber,
         date: invoiceDate,
         country,
@@ -509,9 +511,10 @@ invoicesRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: 
         carPrice: carRecord?.price || null,
         carFuelType: fuelType || null,
         authorId,
+        updatedAt: new Date(),
       },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -519,7 +522,7 @@ invoicesRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: 
             image: true,
           }
         },
-        carRecord: {
+        CarRecord: {
           select: {
             id: true,
             vin: true,
@@ -531,7 +534,7 @@ invoicesRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: 
             fuel_type: true,
           }
         }
-      }
+      } as any
     })
 
     return res.status(201).json({

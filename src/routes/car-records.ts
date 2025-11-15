@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { Prisma, Role } from '@prisma/client'
+import crypto from 'crypto'
 
 export const carRecordsRouter = Router()
 
@@ -78,7 +79,7 @@ carRecordsRouter.get('/latest', requireRole(Role.SUPER_ADMIN, Role.SALES), async
     const carRecord = await prisma.carRecord.findFirst({
       orderBy: { createdAt: 'desc' },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -123,7 +124,7 @@ carRecordsRouter.get('/search', requireRole(Role.SUPER_ADMIN, Role.SALES), async
         },
       },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -166,7 +167,7 @@ carRecordsRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req:
       prisma.carRecord.findMany({
         where,
         include: {
-          author: {
+          User: {
             select: {
               id: true,
               name: true,
@@ -208,7 +209,7 @@ carRecordsRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (r
     const carRecord = await prisma.carRecord.findUnique({
       where: { id },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -245,6 +246,7 @@ carRecordsRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req
 
     const carRecord = await prisma.carRecord.create({
       data: {
+        id: crypto.randomUUID(),
         vin,
         car_model,
         engine_cc,
@@ -253,9 +255,10 @@ carRecordsRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req
         price,
         fuel_type: fuel_type || 'Gasoline',
         authorId,
+        updatedAt: new Date(),
       },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -307,7 +310,7 @@ carRecordsRouter.patch('/:id', requireOwnerOrAdmin, async (req: AuthRequest, res
       where: { id },
       data: updateData,
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,

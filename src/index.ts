@@ -7,6 +7,7 @@ import { env } from './config/env'
 import { authRouter } from './routes/auth'
 import { usersRouter } from './routes/users'
 import { collectionsRouter } from './routes/collections'
+import { publicCollectionsRouter } from './routes/public-collections'
 import { inspectionsRouter } from './routes/inspections'
 import { carRecordsRouter } from './routes/car-records'
 import { companiesRouter } from './routes/companies'
@@ -50,6 +51,10 @@ app.use(rateLimit({ windowMs: 60_000, max: 200 }))
 
 const API_PREFIX = '/api/v1'
 
+// Public routes (no authentication)
+app.use(`${API_PREFIX}/public/collections`, publicCollectionsRouter)
+
+// Protected routes (authentication required)
 app.use(`${API_PREFIX}/auth`, authRouter)
 app.use(`${API_PREFIX}/users`, usersRouter)
 app.use(`${API_PREFIX}/collections`, collectionsRouter)
@@ -62,8 +67,25 @@ app.use(`${API_PREFIX}/invoice-templates`, invoiceTemplatesRouter)
 
 app.get(`${API_PREFIX}/health`, (_req, res) => res.json({ ok: true }))
 
-app.listen(Number(env.PORT), () => {
+const server = app.listen(Number(env.PORT), () => {
   console.log(`Backend running on http://localhost:${env.PORT}${API_PREFIX}`)
+})
+
+// Graceful shutdown handling for tsx watch
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server')
+  server.close(() => {
+    console.log('HTTP server closed')
+    process.exit(0)
+  })
+})
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server')
+  server.close(() => {
+    console.log('HTTP server closed')
+    process.exit(0)
+  })
 })
 
 

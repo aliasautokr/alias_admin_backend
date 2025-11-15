@@ -3,7 +3,7 @@ import { env } from '../config/env'
 
 const ACCESS_SECRET: Secret = env.JWT_ACCESS_SECRET
 
-export function signAccess(payload: object, expiresIn: string | number = '2h') {
+export function signAccess(payload: object, expiresIn: string | number = '48h') {
   return jwt.sign(payload, ACCESS_SECRET, { expiresIn } as any)
 }
 

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { Prisma, Role } from '@prisma/client'
+import crypto from 'crypto'
 
 export const portInfosRouter = Router()
 
@@ -66,7 +67,7 @@ portInfosRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: 
       prisma.portInfo.findMany({
         where,
         include: {
-          author: {
+          User: {
             select: {
               id: true,
               name: true,
@@ -108,7 +109,7 @@ portInfosRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (re
     const portInfo = await prisma.portInfo.findUnique({
       where: { id },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -141,12 +142,14 @@ portInfosRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req:
 
     const portInfo = await prisma.portInfo.create({
       data: {
+        id: crypto.randomUUID(),
         shortAddress,
         description,
         authorId,
+        updatedAt: new Date(),
       },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -180,7 +183,7 @@ portInfosRouter.patch('/:id', requireOwnerOrAdmin, async (req: AuthRequest, res)
       where: { id },
       data: updateData,
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,

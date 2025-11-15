@@ -4,6 +4,7 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { s3Service } from '../lib/s3'
 import { Prisma, Role } from '@prisma/client'
+import crypto from 'crypto'
 
 export const companiesRouter = Router()
 
@@ -114,7 +115,7 @@ companiesRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req: 
       prisma.company.findMany({
         where,
         include: {
-          author: {
+          User: {
             select: {
               id: true,
               name: true,
@@ -156,7 +157,7 @@ companiesRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (re
     const company = await prisma.company.findUnique({
       where: { id },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -189,15 +190,17 @@ companiesRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req:
 
     const company = await prisma.company.create({
       data: {
+        id: crypto.randomUUID(),
         name,
         address,
         phone,
         logoUrl: logoUrl || null,
         sealUrl: sealUrl || null,
         authorId,
+        updatedAt: new Date(),
       },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -231,7 +234,7 @@ companiesRouter.patch('/:id', requireOwnerOrAdmin, async (req: AuthRequest, res)
       where: { id },
       data: updateData,
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,

@@ -8,7 +8,7 @@ datasource db {
 }
 
 model CarRecord {
-  id               String    @id @default(cuid())
+  id               String    @id
   vin              String    @unique
   car_model        String
   engine_cc        String
@@ -18,8 +18,8 @@ model CarRecord {
   fuel_type        String    @default("Gasoline")
   authorId         String
   createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  author           User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  updatedAt        DateTime
+  User             User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   Invoice          Invoice[]
 
   @@index([authorId])
@@ -27,20 +27,19 @@ model CarRecord {
 }
 
 model Collection {
-  id          String   @id @default(cuid())
-  title       String
-  images      String[]
-  description Json
-  authorId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  data      Json
+  listingId String   @unique
+  id        Int      @id @default(autoincrement())
+  User      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
 }
 
 model Company {
-  id        String   @id @default(cuid())
+  id        String   @id
   name      String
   address   String
   phone     String
@@ -48,28 +47,32 @@ model Company {
   sealUrl   String?
   authorId  String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  updatedAt DateTime
+  User      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
 }
 
 model Inspection {
-  id           String   @id @default(cuid())
-  title        String
-  images       String[]
-  description  Json
-  customerName String?
-  authorId     String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id            String   @id
+  title         String
+  images        String[]
+  description   Json
+  customerName  String?
+  authorId      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  inspectorName String?
+  inspectionId  String   @unique
+  link          String?
+  User          User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
+  @@index([inspectionId])
 }
 
 model Invoice {
-  id            String     @id @default(cuid())
+  id            String     @id
   invoiceNumber String     @unique
   date          DateTime
   country       String
@@ -85,9 +88,9 @@ model Invoice {
   carFuelType   String?
   authorId      String
   createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  carRecord     CarRecord? @relation(fields: [carRecordId], references: [id])
+  updatedAt     DateTime
+  User          User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  CarRecord     CarRecord? @relation(fields: [carRecordId], references: [id])
 
   @@index([authorId])
   @@index([carRecordId])
@@ -96,32 +99,32 @@ model Invoice {
 }
 
 model InvoiceTemplate {
-  id            String   @id @default(cuid())
-  fileName      String
-  fileUrl       String
-  s3Key         String
-  uploadedById  String
-  createdAt     DateTime @default(now())
-  uploadedBy    User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  id           String   @id
+  fileName     String
+  fileUrl      String
+  s3Key        String
+  uploadedById String
+  createdAt    DateTime @default(now())
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
 
-  @@index([uploadedById])
   @@index([createdAt])
+  @@index([uploadedById])
 }
 
 model PortInfo {
-  id           String   @id @default(cuid())
+  id           String   @id
   shortAddress String
   description  String
   authorId     String
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  updatedAt    DateTime
+  User         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
 }
 
 model RefreshToken {
-  id              String    @id @default(cuid())
+  id              String    @id
   userId          String
   hashedToken     String
   expiresAt       DateTime
@@ -132,7 +135,7 @@ model RefreshToken {
 }
 
 model Session {
-  id           String   @id @default(cuid())
+  id           String   @id
   userId       String
   accessToken  String
   refreshToken String
@@ -142,24 +145,24 @@ model Session {
 }
 
 model User {
-  id           String         @id @default(cuid())
-  email        String         @unique
-  name         String?
-  image        String?
-  googleId     String?        @unique
-  role         Role           @default(USER)
-  isActive     Boolean        @default(true)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  CarRecord    CarRecord[]
-  Collection   Collection[]
-  Company      Company[]
-  Inspection   Inspection[]
-  Invoice      Invoice[]
+  id              String            @id
+  email           String            @unique
+  name            String?
+  image           String?
+  googleId        String?           @unique
+  role            Role              @default(USER)
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  CarRecord       CarRecord[]
+  Collection      Collection[]
+  Company         Company[]
+  Inspection      Inspection[]
+  Invoice         Invoice[]
   InvoiceTemplate InvoiceTemplate[]
-  PortInfo     PortInfo[]
-  RefreshToken RefreshToken[]
-  Session      Session[]
+  PortInfo        PortInfo[]
+  RefreshToken    RefreshToken[]
+  Session         Session[]
 }
 
 enum Role {

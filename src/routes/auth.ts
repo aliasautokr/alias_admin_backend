@@ -12,7 +12,7 @@ const GoogleBody = z.object({ idToken: z.string().min(10) })
 const RefreshBody = z.object({ refreshToken: z.string().min(10) })
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
-const ACCESS_EXPIRES_IN_SECONDS = 2 * 60 * 60
+const ACCESS_EXPIRES_IN_SECONDS = 48 * 60 * 60
 
 authRouter.post('/google', async (req, res) => {
   const parsed = GoogleBody.safeParse(req.body)
@@ -31,8 +31,16 @@ authRouter.post('/google', async (req, res) => {
 
   const user = await prisma.user.upsert({
     where: { email },
-    create: { email, googleId, name, image, role },
-    update: { googleId, name, image },
+    create: { 
+      id: crypto.randomUUID(), 
+      email, 
+      googleId, 
+      name, 
+      image, 
+      role,
+      updatedAt: new Date(),
+    },
+    update: { googleId, name, image, updatedAt: new Date() },
   })
 
   await prisma.refreshToken.deleteMany({ where: { userId: user.id } })
@@ -42,6 +50,7 @@ authRouter.post('/google', async (req, res) => {
 
   await prisma.refreshToken.create({
     data: {
+      id: crypto.randomUUID(),
       userId: user.id,
       hashedToken: hashedRefreshToken,
       expiresAt: new Date(Date.now() + THIRTY_DAYS_MS),
@@ -87,6 +96,7 @@ authRouter.post('/refresh', async (req, res) => {
       accessToken,
       refreshToken,
       expiresIn: ACCESS_EXPIRES_IN_SECONDS,
+      user,
     },
   })
 })

@@ -13,6 +13,7 @@
     "@aws-sdk/client-s3": "^3.916.0",
     "@aws-sdk/s3-request-presigner": "^3.916.0",
     "@prisma/client": "^5.19.1",
+    "@types/multer": "^2.0.0",
     "cors": "^2.8.5",
     "docxtemplater": "^3.67.1",
     "dotenv": "^16.4.5",
@@ -24,6 +25,7 @@
     "multer": "^2.0.2",
     "pizzip": "^3.2.0",
     "react-dropzone": "^14.3.8",
+    "sharp": "^0.34.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

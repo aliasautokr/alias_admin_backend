@@ -1,11 +1,31 @@
 import { Router } from 'express'
 import { z } from 'zod'
+import multer from 'multer'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { s3Service } from '../lib/s3'
+import { optimizeImage } from '../lib/image-optimizer'
 import { Prisma, Role } from '@prisma/client'
 
 export const inspectionsRouter = Router()
+
+// Configure multer for memory storage (no disk writes)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max file size before optimization
+  },
+  fileFilter: (req, file, cb) => {
+    if (s3Service.isValidImageType(file.mimetype)) {
+      cb(null, true)
+    } else {
+      cb(new Error('Invalid file type. Only images (JPEG, PNG, GIF, WEBP) are allowed.'))
+    }
+  },
+})
+
+// Helper function to generate inspectionId (8-digit number)
+const generateInspectionId = () => Math.floor(10000000 + Math.random() * 90000000).toString()
 
 // Validation schemas
 const CreateInspectionSchema = z.object({
@@ -13,6 +33,9 @@ const CreateInspectionSchema = z.object({
   images: z.array(z.string().url()).min(1),
   description: z.any(), // Editor.js JSON
   customerName: z.string().optional(),
+  inspectorName: z.string().optional(),
+  inspectionId: z.string().optional(),
+  link: z.string().optional(),
 })
 
 const UpdateInspectionSchema = z.object({
@@ -20,6 +43,9 @@ const UpdateInspectionSchema = z.object({
   images: z.array(z.string().url()).optional(),
   description: z.any().optional(),
   customerName: z.string().optional(),
+  inspectorName: z.string().optional(),
+  inspectionId: z.string().optional(),
+  link: z.string().optional(),
 })
 
 const UploadUrlSchema = z.object({
@@ -93,7 +119,74 @@ inspectionsRouter.delete('/image', async (req: AuthRequest, res) => {
   }
 })
 
-// POST /api/v1/inspections/upload-url - Generate presigned URL for image upload
+// POST /api/v1/inspections/upload-image - Upload and optimize image
+inspectionsRouter.post('/upload-image', requireAuth, upload.single('image'), async (req: AuthRequest, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No image file provided' 
+      })
+    }
+
+    const userId = req.user!.id
+    const originalFileName = req.file.originalname
+    const originalSize = req.file.size
+
+    console.log(`Uploading inspection image: ${originalFileName} (${(originalSize / 1024 / 1024).toFixed(2)}MB) - User ID: ${userId}`)
+
+    // Optimize the image
+    const optimized = await optimizeImage(req.file.buffer, {
+      maxWidth: 1920,
+      maxHeight: 1920,
+      quality: 85,
+    })
+
+    const compressionRatio = ((1 - optimized.optimizedSize / originalSize) * 100).toFixed(1)
+    console.log(`Image optimized: ${originalFileName} - ${(originalSize / 1024 / 1024).toFixed(2)}MB → ${(optimized.optimizedSize / 1024 / 1024).toFixed(2)}MB (${compressionRatio}% reduction)`)
+
+    // Generate S3 key with optimized extension
+    const extension = optimized.contentType.split('/')[1] // 'jpeg', 'png', or 'webp'
+    const baseFileName = originalFileName.split('.')[0]
+    const key = s3Service.generateUniqueKey(`${baseFileName}.${extension}`, userId, 'Inspection')
+
+    // Upload optimized image to S3
+    const imageUrl = await s3Service.uploadFile(key, optimized.buffer, optimized.contentType)
+
+    return res.json({
+      success: true,
+      data: {
+        imageUrl,
+        key,
+        originalSize,
+        optimizedSize: optimized.optimizedSize,
+        compressionRatio: `${compressionRatio}%`,
+        width: optimized.width,
+        height: optimized.height,
+        contentType: optimized.contentType,
+      }
+    })
+  } catch (error: any) {
+    console.error('Image upload error:', error)
+    
+    // Handle multer errors
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'File size too large. Maximum size is 10MB.' 
+        })
+      }
+    }
+    
+    return res.status(500).json({ 
+      success: false, 
+      error: error?.message || 'Failed to upload and optimize image' 
+    })
+  }
+})
+
+// POST /api/v1/inspections/upload-url - Generate presigned URL for image upload (legacy, kept for backward compatibility)
 inspectionsRouter.post('/upload-url', async (req: AuthRequest, res) => {
   try {
     const { fileName, fileType } = UploadUrlSchema.parse(req.body)
@@ -147,7 +240,7 @@ inspectionsRouter.get('/', requireRole(Role.SUPER_ADMIN, Role.SALES), async (req
       prisma.inspection.findMany({
         where,
         include: {
-          author: {
+          User: {
             select: {
               id: true,
               name: true,
@@ -214,7 +307,7 @@ inspectionsRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (
     const inspection = await prisma.inspection.findUnique({
       where: { id },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -263,19 +356,67 @@ inspectionsRouter.get('/:id', requireRole(Role.SUPER_ADMIN, Role.SALES), async (
 // POST /api/v1/inspections - Create inspection
 inspectionsRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (req: AuthRequest, res) => {
   try {
-    const { title, images, description, customerName } = CreateInspectionSchema.parse(req.body)
+    const { title, images, description, customerName, inspectorName, inspectionId: providedInspectionId, link: providedLink } = CreateInspectionSchema.parse(req.body)
     const authorId = req.user!.id
+
+    // Generate inspectionId if not provided or if empty string
+    let inspectionId: string
+    if (providedInspectionId && providedInspectionId.trim()) {
+      // Use provided inspectionId
+      inspectionId = providedInspectionId.trim()
+      
+      // Check if it already exists
+      const existing = await prisma.inspection.findUnique({
+        where: { inspectionId },
+        select: { id: true }
+      })
+      
+      if (existing) {
+        return res.status(400).json({ 
+          success: false, 
+          error: `Inspection ID "${inspectionId}" already exists. Please use a different ID.` 
+        })
+      }
+    } else {
+      // Generate a unique inspectionId
+      let attempts = 0
+      const maxAttempts = 10
+      do {
+        inspectionId = generateInspectionId()
+        // Check if it already exists
+        const existing = await prisma.inspection.findUnique({
+          where: { inspectionId },
+          select: { id: true }
+        })
+        if (!existing) break
+        attempts++
+      } while (attempts < maxAttempts)
+      
+      if (attempts >= maxAttempts) {
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to generate unique inspection ID. Please try again.' 
+        })
+      }
+    }
+    
+    // Generate link if not provided
+    const link = providedLink?.trim() || `aliasauto.kr/inspection/${inspectionId}`
 
     const inspection = await prisma.inspection.create({
       data: {
+        id: crypto.randomUUID(),
         title,
         images,
         description,
         customerName,
+        inspectorName,
+        inspectionId,
+        link,
         authorId,
       },
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -290,9 +431,31 @@ inspectionsRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (re
       success: true,
       data: inspection
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create inspection error:', error)
-    return res.status(500).json({ success: false, error: 'Failed to create inspection' })
+    
+    // Handle Prisma unique constraint errors
+    if (error?.code === 'P2002') {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Inspection ID "${providedInspectionId || inspectionId}" already exists. Please try again.` 
+      })
+    }
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        success: false, 
+        error: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ') 
+      })
+    }
+    
+    // Return more detailed error message
+    const errorMessage = error?.message || 'Failed to create inspection'
+    return res.status(500).json({ 
+      success: false, 
+      error: errorMessage 
+    })
   }
 })
 
@@ -300,13 +463,25 @@ inspectionsRouter.post('/', requireRole(Role.SALES, Role.SUPER_ADMIN), async (re
 inspectionsRouter.patch('/:id', requireOwnerOrAdmin, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params
-    const updateData = UpdateInspectionSchema.parse(req.body)
+    const { inspectionId: providedInspectionId, link: providedLink, ...restData } = UpdateInspectionSchema.parse(req.body)
+
+    // Prepare update data
+    const updateData: any = { ...restData }
+
+    // If inspectionId is provided, update it and regenerate link
+    if (providedInspectionId) {
+      updateData.inspectionId = providedInspectionId
+      updateData.link = providedLink || `aliasauto.kr/inspection/${providedInspectionId}`
+    } else if (providedLink) {
+      // If only link is provided, update it
+      updateData.link = providedLink
+    }
 
     const inspection = await prisma.inspection.update({
       where: { id },
       data: updateData,
       include: {
-        author: {
+        User: {
           select: {
             id: true,
             name: true,

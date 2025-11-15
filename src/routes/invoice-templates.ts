@@ -4,6 +4,7 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { s3Service } from '../lib/s3'
 import { Role } from '@prisma/client'
+import crypto from 'crypto'
 
 export const invoiceTemplatesRouter = Router()
 
@@ -65,6 +66,7 @@ invoiceTemplatesRouter.post('/', requireRole(Role.SUPER_ADMIN), async (req: Auth
 
     const template = await prisma.invoiceTemplate.create({
       data: {
+        id: crypto.randomUUID(),
         fileName,
         fileUrl,
         s3Key,
